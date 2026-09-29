@@ -355,8 +355,8 @@ blocked by the workspace allowlist. Phase 0 does not execute repository code
 or depend on that postinstall hook; the TypeScript, lint, boundary, test, CLI,
 and audit gates all pass.
 
-Phase 1+ work remains intentionally unimplemented: Git range resolution, OCR,
-Jev, impact discovery, GitHub publication, Actions, and provider secrets.
+Phase 2+ work remains intentionally unimplemented: Jev, impact discovery,
+GitHub publication, Actions, and provider secrets.
 
 ## AAS skill selection
 
