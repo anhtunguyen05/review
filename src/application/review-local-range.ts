@@ -1,10 +1,13 @@
 import type { ArtifactStore } from "./ports/artifact-store.js";
 import type { DeepReviewEngine } from "./ports/deep-review-engine.js";
 import type { GitRepositoryPort } from "./ports/git-repository.js";
+import type { ScreeningEngine } from "./ports/screening-engine.js";
+import { collectDirectScreeningCandidates } from "./direct-screening-candidates.js";
 import type {
   ArtifactEnvelope,
   DeepReviewResult,
   ReviewRunArtifacts,
+  ScreeningResult,
 } from "../domain/review/contracts.js";
 
 export interface LocalReviewInput {
@@ -18,14 +21,16 @@ export interface LocalReviewInput {
 
 export interface LocalReviewDependencies {
   git: GitRepositoryPort;
+  screening: ScreeningEngine;
   deepReview: DeepReviewEngine;
   artifacts: ArtifactStore;
 }
 
 export interface LocalReviewResult {
   runId: string;
-  status: "ok" | "failed";
+  status: "ok" | "partial" | "failed";
   findingsCount: number;
+  screeningDecisionsCount: number;
   artifacts: ReviewRunArtifacts;
 }
 
@@ -44,6 +49,33 @@ export async function reviewLocalRange(
 ): Promise<LocalReviewResult> {
   const range = await dependencies.git.resolveRange(input);
   const changedFiles = await dependencies.git.getChangedFiles(range);
+  const directCandidates = collectDirectScreeningCandidates(changedFiles);
+  let screening: ScreeningResult;
+
+  if (directCandidates.candidates.length === 0) {
+    screening = {
+      status: "ok",
+      decisions: [],
+      rawOutput: "",
+      rawJson: { decisions: [] },
+      diagnostics: ["No direct JS/TS source files required screening"],
+    };
+  } else {
+    try {
+      screening = await dependencies.screening.screen({ ...range, candidates: directCandidates.candidates });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Screening failed";
+      screening = {
+        status: "failed",
+        decisions: [],
+        rawOutput: "",
+        rawJson: null,
+        diagnostics: [message],
+        error: message,
+      };
+    }
+  }
+
   let deepReview: DeepReviewResult;
 
   try {
@@ -60,6 +92,8 @@ export async function reviewLocalRange(
     };
   }
 
+  const screeningDiagnostics = [...directCandidates.diagnostics, ...screening.diagnostics];
+  const status = deepReview.status === "failed" ? "failed" : screening.status === "failed" ? "partial" : "ok";
   const artifacts: ReviewRunArtifacts = {
     run: envelope(input.runId, input.createdAt, range.headSha, {
       repositoryPath: range.repositoryPath,
@@ -69,8 +103,17 @@ export async function reviewLocalRange(
       headSha: range.headSha,
       mergeBaseSha: range.mergeBaseSha,
       changedFiles,
-      status: deepReview.status,
-      diagnostics: deepReview.diagnostics,
+      status,
+      diagnostics: [...screeningDiagnostics.map((item) => "Screening: " + item), ...deepReview.diagnostics],
+    }),
+    screening: envelope(input.runId, input.createdAt, range.headSha, {
+      status: screening.status,
+      candidates: directCandidates.candidates,
+      decisions: screening.decisions,
+      rawOutput: screening.rawOutput,
+      rawJson: screening.rawJson,
+      diagnostics: screeningDiagnostics,
+      ...(screening.error === undefined ? {} : { error: screening.error }),
     }),
     ocrRaw: envelope(input.runId, input.createdAt, range.headSha, {
       status: deepReview.status,
@@ -88,8 +131,9 @@ export async function reviewLocalRange(
 
   return {
     runId: input.runId,
-    status: deepReview.status,
+    status,
     findingsCount: deepReview.findings.length,
+    screeningDecisionsCount: screening.decisions.length,
     artifacts,
   };
 }

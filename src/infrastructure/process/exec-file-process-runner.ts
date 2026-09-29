@@ -3,10 +3,13 @@ import type { ProcessRequest, ProcessResult, ProcessRunner } from "../../applica
 
 export class ExecFileProcessRunner implements ProcessRunner {
   run(request: ProcessRequest): Promise<ProcessResult> {
+    const isWindowsScript = process.platform === "win32" && /\.(?:c|m)?js$/i.test(request.command);
+    const command = isWindowsScript ? process.execPath : request.command;
+    const args = isWindowsScript ? [request.command, ...request.args] : request.args;
     return new Promise((resolve) => {
       execFile(
-        request.command,
-        request.args,
+        command,
+        args,
         {
           cwd: request.cwd,
           shell: false,

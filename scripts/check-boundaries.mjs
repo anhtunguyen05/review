@@ -22,7 +22,7 @@ function importSpecifiers(source) {
 }
 
 function layerOf(path) {
-  const normalized = normalize(path).replaceAll("\\\\", "/");
+  const normalized = normalize(path).replaceAll("\\", "/");
   const match = normalized.match(/(?:^|\/)src\/([^/]+)/);
   return match?.[1] ?? "unknown";
 }

@@ -58,6 +58,42 @@ export interface DeepReviewInput extends GitReviewRange {
   changedFiles: ChangedFile[];
 }
 
+export interface ScreeningCandidate {
+  id: string;
+  path: string;
+  status: ChangedFileStatus;
+  previousPath?: string;
+  directChange: true;
+}
+
+export interface ScreeningInput extends GitReviewRange {
+  candidates: ScreeningCandidate[];
+}
+
+export type ScreeningAction = "SKIP" | "LIGHT" | "DEEP";
+
+export interface ScreeningDecision {
+  candidateId: string;
+  relevance: number;
+  correctnessRisk: number;
+  securityRisk: number;
+  reliabilityRisk: number;
+  compatibilityRisk: number;
+  testGapRisk: number;
+  confidence: number;
+  action: ScreeningAction;
+  evidence?: string[];
+}
+
+export interface ScreeningResult {
+  status: "ok" | "failed" | "disabled";
+  decisions: ScreeningDecision[];
+  rawOutput: string;
+  rawJson: unknown;
+  diagnostics: string[];
+  error?: string;
+}
+
 export interface DeepReviewResult {
   status: "ok" | "failed";
   rawOutput: string;
@@ -84,8 +120,17 @@ export interface ReviewRunArtifacts {
     headSha: string;
     mergeBaseSha: string;
     changedFiles: ChangedFile[];
-    status: "ok" | "failed";
+    status: "ok" | "partial" | "failed";
     diagnostics: string[];
+  }>;
+  screening: ArtifactEnvelope<{
+    status: ScreeningResult["status"];
+    candidates: ScreeningCandidate[];
+    decisions: ScreeningDecision[];
+    rawOutput: string;
+    rawJson: unknown;
+    diagnostics: string[];
+    error?: string;
   }>;
   ocrRaw: ArtifactEnvelope<{
     status: "ok" | "failed";

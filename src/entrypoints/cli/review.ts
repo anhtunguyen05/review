@@ -9,11 +9,14 @@ Usage:
   review --help
   review [--config <path>] [--log-level <debug|info|warn|error>]
   review --repo <path> --from <ref> --to <ref> [--output <dir>] [--ocr-command <path>] [--ocr-arg <arg>]
+         [--screening-command <path>] [--screening-arg <arg>]
 
-Phase 1 local review:
-  Resolves merge-base(from, to), invokes the trusted OCR executable, and writes
-  run.json, ocr.raw.json, and findings.json to the output directory.
+Local review:
+  Resolves merge-base(from, to), screens direct JS/TS files when a trusted
+  screening executable is configured, invokes OCR, and writes run.json,
+  screening.json, ocr.raw.json, and findings.json to the output directory.
   The OCR executable may also be supplied with OCR_COMMAND.
+  The screening executable may be supplied with SCREENING_COMMAND.
 `;
 
 interface ParsedArgs {
@@ -26,6 +29,8 @@ interface ParsedArgs {
   outputDirectory?: string;
   ocrCommand?: string;
   ocrArgs: string[];
+  screeningCommand?: string;
+  screeningArgs: string[];
 }
 
 function fail(message: string): never {
@@ -49,6 +54,8 @@ function parseArgs(args: string[]): ParsedArgs {
   let outputDirectory: string | undefined;
   let ocrCommand: string | undefined;
   const ocrArgs: string[] = [];
+  let screeningCommand: string | undefined;
+  const screeningArgs: string[] = [];
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -80,6 +87,12 @@ function parseArgs(args: string[]): ParsedArgs {
     } else if (arg === "--ocr-arg") {
       ocrArgs.push(requiredValue(args, index, "--ocr-arg"));
       index += 1;
+    } else if (arg === "--screening-command") {
+      screeningCommand = requiredValue(args, index, "--screening-command");
+      index += 1;
+    } else if (arg === "--screening-arg") {
+      screeningArgs.push(requiredValue(args, index, "--screening-arg"));
+      index += 1;
     } else {
       fail("unknown option: " + arg);
     }
@@ -95,6 +108,8 @@ function parseArgs(args: string[]): ParsedArgs {
     ...(outputDirectory === undefined ? {} : { outputDirectory }),
     ...(ocrCommand === undefined ? {} : { ocrCommand }),
     ocrArgs,
+    ...(screeningCommand === undefined ? {} : { screeningCommand }),
+    screeningArgs,
   };
 }
 
@@ -118,6 +133,7 @@ export async function run(args: string[]): Promise<number> {
 
   const ocrCommand = parsed.ocrCommand ?? process.env.OCR_COMMAND;
   if (!ocrCommand) fail("--ocr-command or OCR_COMMAND is required for a Phase 1 review");
+  const screeningCommand = parsed.screeningCommand ?? process.env.SCREENING_COMMAND;
 
   const metadata = createRunMetadata();
   const result = await reviewLocalRange(
@@ -128,7 +144,7 @@ export async function run(args: string[]): Promise<number> {
       outputDirectory: parsed.outputDirectory ?? "artifacts",
       ...metadata,
     },
-    buildLocalReview(ocrCommand, parsed.ocrArgs),
+    buildLocalReview(ocrCommand, parsed.ocrArgs, screeningCommand, parsed.screeningArgs),
   );
   process.stdout.write(
     "Review " + result.status + ": " + result.findingsCount + " finding(s), run " + result.runId + "\n",
@@ -136,7 +152,7 @@ export async function run(args: string[]): Promise<number> {
   return result.status === "ok" ? 0 : 1;
 }
 
-if (process.argv[1]?.endsWith("/review.ts")) {
+if (process.argv[1]?.endsWith("/review.ts") || process.argv[1]?.endsWith("\\review.ts")) {
   run(process.argv.slice(2)).then((exitCode) => { process.exitCode = exitCode; }).catch((error: unknown) => {
     const message = error instanceof Error ? error.message : "Unexpected error";
     console.error("error: " + message);
