@@ -22,6 +22,73 @@ export interface CodeLocation {
   symbol?: string;
 }
 
+export type ImpactEdgeKind =
+  | "IMPORTS"
+  | "CALLS"
+  | "REFERENCES"
+  | "IMPLEMENTS"
+  | "TESTS"
+  | "CONFIGURES"
+  | "SEMANTIC";
+
+export interface ImpactNode {
+  id: string;
+  location: CodeLocation;
+  directChange: boolean;
+}
+
+export interface ImpactEdge {
+  from: string;
+  to: string;
+  kind: ImpactEdgeKind;
+  evidence?: string;
+}
+
+export type ImpactReason =
+  | { kind: "DIRECT_CHANGE" }
+  | { kind: "IMPORTER"; sourcePath: string }
+  | { kind: "SYMBOL_REFERENCE"; symbol: string; sourcePath: string }
+  | { kind: "CALLER"; symbol: string; sourcePath: string }
+  | { kind: "IMPLEMENTATION"; symbol: string; sourcePath: string }
+  | { kind: "TEST_RELATION"; sourcePath: string }
+  | { kind: "CONFIG_REFERENCE"; key: string; sourcePath: string }
+  | { kind: "DOC_SEMANTIC"; concept: string; evidence: string }
+  | { kind: "TEXT_REFERENCE"; query: string };
+
+export interface ImpactCandidate {
+  id: string;
+  nodeId: string;
+  score: number;
+  reasons: ImpactReason[];
+}
+
+export interface ImpactGraph {
+  nodes: ImpactNode[];
+  edges: ImpactEdge[];
+  candidates: ImpactCandidate[];
+}
+
+export interface ImpactPolicy {
+  maxDepth: number;
+  maxCandidateFiles: number;
+  maxFileBytes: number;
+  includeTests: boolean;
+  includeDocs: boolean;
+  ignoredPathSegments: string[];
+}
+
+export interface ImpactDiscoveryInput extends GitReviewRange {
+  changedFiles: ChangedFile[];
+  policy: ImpactPolicy;
+}
+
+export interface ImpactDiscoveryResult {
+  status: "ok" | "failed";
+  graph: ImpactGraph;
+  diagnostics: string[];
+  error?: string;
+}
+
 export type FindingType =
   | "DEFECT"
   | "SECURITY"
@@ -129,6 +196,12 @@ export interface ReviewRunArtifacts {
     decisions: ScreeningDecision[];
     rawOutput: string;
     rawJson: unknown;
+    diagnostics: string[];
+    error?: string;
+  }>;
+  impact: ArtifactEnvelope<{
+    status: ImpactDiscoveryResult["status"];
+    graph: ImpactGraph;
     diagnostics: string[];
     error?: string;
   }>;

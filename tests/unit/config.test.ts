@@ -15,6 +15,14 @@ describe("bootstrap configuration", () => {
     await expect(loadBootstrapConfig()).resolves.toEqual({
       version: 1,
       logging: { level: "info" },
+      impact: {
+        maxDepth: 2,
+        maxCandidateFiles: 80,
+        maxFileBytes: 512 * 1024,
+        includeTests: true,
+        includeDocs: true,
+        ignoredPathSegments: [".git", "node_modules", "vendor", "dist", "build", "coverage"],
+      },
     });
   });
 
@@ -22,11 +30,19 @@ describe("bootstrap configuration", () => {
     const directory = await mkdtemp(join(tmpdir(), "review-orchestrator-"));
     temporaryPaths.push(directory);
     const path = join(directory, "config.yml");
-    await writeFile(path, "version: 1\nlogging:\n  level: debug\n", "utf8");
+    await writeFile(path, "version: 1\nlogging:\n  level: debug\nimpact:\n  maxDepth: 1\n  includeTests: false\n", "utf8");
 
     await expect(loadBootstrapConfig(path)).resolves.toEqual({
       version: 1,
       logging: { level: "debug" },
+      impact: {
+        maxDepth: 1,
+        maxCandidateFiles: 80,
+        maxFileBytes: 512 * 1024,
+        includeTests: false,
+        includeDocs: true,
+        ignoredPathSegments: [".git", "node_modules", "vendor", "dist", "build", "coverage"],
+      },
     });
   });
 

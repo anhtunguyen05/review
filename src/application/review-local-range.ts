@@ -2,10 +2,13 @@ import type { ArtifactStore } from "./ports/artifact-store.js";
 import type { DeepReviewEngine } from "./ports/deep-review-engine.js";
 import type { GitRepositoryPort } from "./ports/git-repository.js";
 import type { ScreeningEngine } from "./ports/screening-engine.js";
+import type { ImpactAnalyzer } from "./ports/impact-analyzer.js";
 import { collectDirectScreeningCandidates } from "./direct-screening-candidates.js";
 import type {
   ArtifactEnvelope,
   DeepReviewResult,
+  ImpactPolicy,
+  ImpactDiscoveryResult,
   ReviewRunArtifacts,
   ScreeningResult,
 } from "../domain/review/contracts.js";
@@ -21,6 +24,8 @@ export interface LocalReviewInput {
 
 export interface LocalReviewDependencies {
   git: GitRepositoryPort;
+  impact: ImpactAnalyzer;
+  impactPolicy: ImpactPolicy;
   screening: ScreeningEngine;
   deepReview: DeepReviewEngine;
   artifacts: ArtifactStore;
@@ -30,6 +35,7 @@ export interface LocalReviewResult {
   runId: string;
   status: "ok" | "partial" | "failed";
   findingsCount: number;
+  impactCandidatesCount: number;
   screeningDecisionsCount: number;
   artifacts: ReviewRunArtifacts;
 }
@@ -49,6 +55,13 @@ export async function reviewLocalRange(
 ): Promise<LocalReviewResult> {
   const range = await dependencies.git.resolveRange(input);
   const changedFiles = await dependencies.git.getChangedFiles(range);
+  let impact: ImpactDiscoveryResult;
+  try {
+    impact = await dependencies.impact.discover({ ...range, changedFiles, policy: dependencies.impactPolicy });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Impact discovery failed";
+    impact = { status: "failed", graph: { nodes: [], edges: [], candidates: [] }, diagnostics: [message], error: message };
+  }
   const directCandidates = collectDirectScreeningCandidates(changedFiles);
   let screening: ScreeningResult;
 
@@ -93,7 +106,7 @@ export async function reviewLocalRange(
   }
 
   const screeningDiagnostics = [...directCandidates.diagnostics, ...screening.diagnostics];
-  const status = deepReview.status === "failed" ? "failed" : screening.status === "failed" ? "partial" : "ok";
+  const status = deepReview.status === "failed" ? "failed" : screening.status === "failed" || impact.status === "failed" ? "partial" : "ok";
   const artifacts: ReviewRunArtifacts = {
     run: envelope(input.runId, input.createdAt, range.headSha, {
       repositoryPath: range.repositoryPath,
@@ -104,7 +117,11 @@ export async function reviewLocalRange(
       mergeBaseSha: range.mergeBaseSha,
       changedFiles,
       status,
-      diagnostics: [...screeningDiagnostics.map((item) => "Screening: " + item), ...deepReview.diagnostics],
+      diagnostics: [
+        ...impact.diagnostics.map((item) => "Impact: " + item),
+        ...screeningDiagnostics.map((item) => "Screening: " + item),
+        ...deepReview.diagnostics,
+      ],
     }),
     screening: envelope(input.runId, input.createdAt, range.headSha, {
       status: screening.status,
@@ -114,6 +131,12 @@ export async function reviewLocalRange(
       rawJson: screening.rawJson,
       diagnostics: screeningDiagnostics,
       ...(screening.error === undefined ? {} : { error: screening.error }),
+    }),
+    impact: envelope(input.runId, input.createdAt, range.headSha, {
+      status: impact.status,
+      graph: impact.graph,
+      diagnostics: impact.diagnostics,
+      ...(impact.error === undefined ? {} : { error: impact.error }),
     }),
     ocrRaw: envelope(input.runId, input.createdAt, range.headSha, {
       status: deepReview.status,
@@ -133,6 +156,7 @@ export async function reviewLocalRange(
     runId: input.runId,
     status,
     findingsCount: deepReview.findings.length,
+    impactCandidatesCount: impact.graph.candidates.length,
     screeningDecisionsCount: screening.decisions.length,
     artifacts,
   };

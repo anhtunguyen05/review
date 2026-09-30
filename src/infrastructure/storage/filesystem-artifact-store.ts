@@ -10,6 +10,7 @@ export class FileSystemArtifactStore implements ArtifactStore {
     await Promise.all([
       this.write(directory, "run.json", artifacts.run),
       this.write(directory, "screening.json", artifacts.screening),
+      this.write(directory, "impact-graph.json", artifacts.impact),
       this.write(directory, "ocr.raw.json", artifacts.ocrRaw),
       this.write(directory, "findings.json", artifacts.findings),
     ]);

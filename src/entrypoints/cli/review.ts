@@ -11,10 +11,12 @@ Usage:
   review --repo <path> --from <ref> --to <ref> [--output <dir>] [--ocr-command <path>] [--ocr-arg <arg>]
          [--screening-command <path>] [--screening-arg <arg>]
 
-Local review:
-  Resolves merge-base(from, to), screens direct JS/TS files when a trusted
-  screening executable is configured, invokes OCR, and writes run.json,
-  screening.json, ocr.raw.json, and findings.json to the output directory.
+  Local review:
+  Resolves merge-base(from, to), discovers structural JS/TS impact, screens
+  direct files when a trusted screening executable is configured, invokes OCR,
+  and writes run.json, impact-graph.json, screening.json, ocr.raw.json, and
+  findings.json to the output directory.
+  Impact limits are configured under the trusted --config YAML file.
   The OCR executable may also be supplied with OCR_COMMAND.
   The screening executable may be supplied with SCREENING_COMMAND.
 `;
@@ -144,7 +146,7 @@ export async function run(args: string[]): Promise<number> {
       outputDirectory: parsed.outputDirectory ?? "artifacts",
       ...metadata,
     },
-    buildLocalReview(ocrCommand, parsed.ocrArgs, screeningCommand, parsed.screeningArgs),
+    buildLocalReview(ocrCommand, parsed.ocrArgs, screeningCommand, parsed.screeningArgs, bootstrap.config.impact),
   );
   process.stdout.write(
     "Review " + result.status + ": " + result.findingsCount + " finding(s), run " + result.runId + "\n",
