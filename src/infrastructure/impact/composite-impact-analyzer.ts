@@ -11,24 +11,16 @@ import type {
   ImpactReason,
 } from "../../domain/review/contracts.js";
 import { impactCandidateId, impactNodeId } from "../../domain/review/impact-policy.js";
+import { classifyRepositoryFile, isImpactAnalyzablePath, isTextRepositoryContent } from "../../domain/review/source-support.js";
 import { ConfigSchemaAnalyzer } from "./config-schema-analyzer.js";
 import type { ImpactFragment, ImpactFragmentAnalyzer, ImpactFragmentInput, ImpactSnapshotFile } from "./impact-fragment.js";
 import { TestRelationAnalyzer } from "./test-relation-analyzer.js";
-import { TextReferenceAnalyzer } from "./text-reference-analyzer.js";
 import { TypeScriptImportAnalyzer } from "./languages/typescript-analyzer.js";
 import { SemanticImpactAnalyzer } from "./semantic-impact-analyzer.js";
-import { goImpactAnalyzer, javaImpactAnalyzer, phpImpactAnalyzer, pythonImpactAnalyzer } from "./languages/additional-language-analyzers.js";
-
-const sourceExtensions = new Set([".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"]);
-const documentationExtensions = new Set([".md", ".mdx", ".txt"]);
-const configExtensions = new Set([".json", ".yaml", ".yml"]);
+import { GenericReferenceImpactAnalyzer } from "./generic-reference-impact-analyzer.js";
 
 function normalizePath(path: string): string {
   return pathPosix.normalize(path.replaceAll("\\", "/")).replace(/^\.\//, "");
-}
-
-function extensionOf(path: string): string {
-  return pathPosix.extname(path).toLowerCase();
 }
 
 function isTestPath(path: string): boolean {
@@ -36,19 +28,11 @@ function isTestPath(path: string): boolean {
   return /(^|\/)(tests?|__tests__)(\/|$)/.test(normalized) || /\.(test|spec)\.[^.]+$/.test(normalized);
 }
 
-function isIgnoredPath(path: string, ignoredPathSegments: string[]): boolean {
-  const segments = normalizePath(path).toLowerCase().split("/");
-  const ignored = new Set(ignoredPathSegments.map((segment) => segment.toLowerCase()));
-  return segments.some((segment) => ignored.has(segment)) || /\.generated\.|\.gen\./.test(segments.at(-1) ?? "");
-}
-
 function isAnalyzablePath(path: string, input: ImpactDiscoveryInput): boolean {
   const normalized = normalizePath(path);
-  if (isIgnoredPath(normalized, input.policy.ignoredPathSegments)) return false;
-  const extension = extensionOf(normalized);
-  if (sourceExtensions.has(extension)) return input.policy.includeTests || !isTestPath(normalized);
-  if (configExtensions.has(extension)) return true;
-  return input.policy.includeDocs && documentationExtensions.has(extension);
+  if (!isImpactAnalyzablePath(normalized, input.policy.includeDocs, input.policy.ignoredPathSegments)) return false;
+  const kind = classifyRepositoryFile(normalized, input.policy.ignoredPathSegments);
+  return input.policy.includeTests || kind !== "CODE" || !isTestPath(normalized);
 }
 
 function emptyGraph(): ImpactGraph {
@@ -122,14 +106,10 @@ export class CompositeImpactAnalyzer implements ImpactAnalyzer {
     private readonly content: RepositoryContentPort,
     private readonly analyzers: ImpactFragmentAnalyzer[] = [
       new TypeScriptImportAnalyzer(),
-      new TextReferenceAnalyzer(),
+      new GenericReferenceImpactAnalyzer(),
       new TestRelationAnalyzer(),
       new ConfigSchemaAnalyzer(),
       new SemanticImpactAnalyzer(),
-      phpImpactAnalyzer,
-      goImpactAnalyzer,
-      pythonImpactAnalyzer,
-      javaImpactAnalyzer,
     ],
   ) {}
 
@@ -155,10 +135,16 @@ export class CompositeImpactAnalyzer implements ImpactAnalyzer {
     let directReadFailure = false;
     for (const descriptor of descriptors.values()) {
       try {
+        const content = await this.content.readFile({ repositoryPath: input.repositoryPath, commitSha: descriptor.commitSha, path: descriptor.path });
+        if (!isTextRepositoryContent(content)) {
+          diagnostics.push("Skipped binary repository file: " + descriptor.path);
+          if (descriptor.directChange) directReadFailure = true;
+          continue;
+        }
         files.push({
           path: descriptor.path,
           commitSha: descriptor.commitSha,
-          content: await this.content.readFile({ repositoryPath: input.repositoryPath, commitSha: descriptor.commitSha, path: descriptor.path }),
+          content,
           directChange: descriptor.directChange,
         });
       } catch (error: unknown) {

@@ -27,4 +27,4 @@ This folder contains execution details for the phases listed in
 - [Phase 7](phase-7.md) - post-review verification, correlation, and duplicate consolidation.
 - [Phase 8](phase-8.md) - checkpointed incremental review with safe full fallback.
 - [Phase 9](phase-9.md) - run metrics and deterministic evaluation fixtures.
-- [Phase 10](phase-10.md) - PHP/Go/Python/Java language impact analyzer boundary.
+- [Phase 10](phase-10.md) - language-agnostic repository classification and reference indexing.

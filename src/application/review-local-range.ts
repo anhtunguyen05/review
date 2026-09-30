@@ -112,7 +112,7 @@ export async function reviewLocalRange(
       decisions: [],
       rawOutput: "",
       rawJson: { decisions: [] },
-      diagnostics: ["No direct JS/TS source files required screening"],
+      diagnostics: ["No direct code source files required screening"],
     };
   } else {
     try {

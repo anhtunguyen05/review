@@ -120,7 +120,8 @@ The adapter may reuse/fork Jev judgment logic internally.
 Reason:
 - CI needs explicit PR range;
 - impacted files may be untouched;
-- language support must expand beyond current JS/TS-oriented behavior.
+- the local pipeline supplies generic evidence and does not require a
+  language-specific analyzer before Jev/OCR are called.
 
 ### OCR
 Prefer an adapter around CLI invocation:

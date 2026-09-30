@@ -64,6 +64,30 @@ describe("Jev screening adapter", () => {
     ]));
   });
 
+  it("passes non-JS candidates without language-specific adapter logic", async () => {
+    const runner = new StubProcessRunner(result({
+      stdout: JSON.stringify({
+        decisions: [{
+          candidateId: "direct:modified:src/service.php",
+          relevance: 0.7,
+          correctnessRisk: 0.8,
+          securityRisk: 0.1,
+          reliabilityRisk: 0.2,
+          compatibilityRisk: 0.2,
+          testGapRisk: 0.1,
+          confidence: 0.9,
+        }],
+      }),
+    }));
+    const adapter = new JevScreeningAdapter(runner, "trusted-jev");
+
+    await expect(adapter.screen({
+      ...input,
+      candidates: [{ id: "direct:modified:src/service.php", path: "src/service.php", status: "modified", directChange: true }],
+    })).resolves.toMatchObject({ status: "ok", decisions: [{ action: "DEEP" }] });
+    expect(runner.request?.args).toEqual(expect.arrayContaining(["--candidate-path", "src/service.php"]));
+  });
+
   it("fails conservatively on malformed JSON and provider errors", async () => {
     const malformed = new JevScreeningAdapter(new StubProcessRunner(result({ stdout: "{" })), "trusted-jev");
     await expect(malformed.screen(input)).resolves.toMatchObject({ status: "failed", decisions: [] });

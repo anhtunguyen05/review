@@ -61,4 +61,32 @@ describe("CompositeImpactAnalyzer", () => {
     expect(result.graph.candidates.map((candidate) => candidate.id)).toEqual(["impact:src/status.ts"]);
     expect(result.diagnostics.join(" ")).toContain("max depth 0");
   });
+
+  it.each([
+    ["php", "class PaymentService {}", "<?php $service = new PaymentService();"],
+    ["go", "type PaymentStatus string", "func settle(status PaymentStatus) {}"],
+    ["py", "class PaymentService:\n    pass", "service = PaymentService()"],
+    ["java", "class PaymentService {}", "class Checkout { PaymentService service; }"],
+    ["rs", "struct PaymentService;", "fn checkout(_: PaymentService) {}"],
+  ])("discovers %s consumers without a language-specific analyzer", async (extension, changedContent, consumerContent) => {
+    const changedPath = `src/changed.${extension}`;
+    const consumerPath = `src/consumer.${extension}`;
+    const result = await new CompositeImpactAnalyzer(new StubRepositoryContent({
+      [changedPath]: changedContent,
+      [consumerPath]: consumerContent,
+    })).discover({
+      ...input,
+      changedFiles: [{ path: changedPath, status: "modified" }],
+    });
+
+    expect(result.status).toBe("ok");
+    expect(result.graph.candidates).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: `impact:${consumerPath}`,
+        reasons: expect.arrayContaining([
+          expect.objectContaining({ kind: "SYMBOL_REFERENCE", sourcePath: changedPath }),
+        ]),
+      }),
+    ]));
+  });
 });

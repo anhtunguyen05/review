@@ -83,7 +83,7 @@ describe("adaptive review scope planner", () => {
     const candidates: ScreeningCandidate[] = [
       { id: "direct:src/changed.ts", path: "src/changed.ts", status: "modified", directChange: true },
       { id: "impact:src/skip.ts", path: "src/skip.ts", status: "modified", directChange: false, impactScore: 10 },
-      { id: "impact:src/unsupported.json", path: "src/unsupported.json", status: "modified", directChange: false, impactScore: 80 },
+      { id: "impact:src/unsupported.png", path: "src/unsupported.png", status: "modified", directChange: false, impactScore: 80 },
       { id: "impact:src/large.ts", path: "src/large.ts", status: "modified", directChange: false, impactScore: 90 },
       { id: "impact:src/budget.ts", path: "src/budget.ts", status: "modified", directChange: false, impactScore: 70 },
     ];
@@ -92,7 +92,7 @@ describe("adaptive review scope planner", () => {
       impactGraph: { nodes: [], edges: [], candidates: [] },
       screening: screening([
         decision("impact:src/skip.ts", "SKIP", 1),
-        decision("impact:src/unsupported.json", "DEEP", 80),
+        decision("impact:src/unsupported.png", "DEEP", 80),
         decision("impact:src/large.ts", "DEEP", 90),
         decision("impact:src/budget.ts", "DEEP", 70),
       ]),

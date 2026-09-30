@@ -9,6 +9,7 @@ import type {
   ScreeningCandidate,
   ScreeningResult,
 } from "../domain/review/contracts.js";
+import { isReviewableSourcePath } from "../domain/review/source-support.js";
 
 export interface ScopePlanningInput {
   candidates: ScreeningCandidate[];
@@ -19,16 +20,8 @@ export interface ScopePlanningInput {
   estimatedDurationMsByPath?: Readonly<Record<string, number>>;
 }
 
-const sourceExtensions = new Set([".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"]);
-
-function extensionOf(path: string): string {
-  const normalized = path.replaceAll("\\", "/");
-  const index = normalized.lastIndexOf(".");
-  return index < 0 ? "" : normalized.slice(index).toLowerCase();
-}
-
 function isSupportedPath(path: string): boolean {
-  return sourceExtensions.has(extensionOf(path));
+  return isReviewableSourcePath(path);
 }
 
 function riskOf(decision: { correctnessRisk: number; securityRisk: number; reliabilityRisk: number; compatibilityRisk: number; testGapRisk: number }): number {
@@ -123,7 +116,7 @@ export function planReviewScope(input: ScopePlanningInput): ScopePlanningResult 
   for (const item of impacted) {
     const { candidate, decision, scope } = item;
     if (!isSupportedPath(scope.location.path)) {
-      exclusions.push(exclusion(candidate.id, scope.location.path, "UNSUPPORTED_PATH", "Phase 5 OCR scope supports JS/TS paths only"));
+      exclusions.push(exclusion(candidate.id, scope.location.path, "UNSUPPORTED_PATH", "Repository file is not a supported text source"));
       continue;
     }
     if (screeningUnavailable || !decision) {

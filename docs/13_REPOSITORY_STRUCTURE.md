@@ -54,7 +54,8 @@ code-review-orchestrator/
 │   │   │   └── github-publisher.ts
 │   │   ├── impact/
 │   │   │   ├── composite-impact-analyzer.ts
-│   │   │   ├── text-reference-analyzer.ts
+│   │   │   ├── generic-reference-impact-analyzer.ts
+│   │   │   ├── repository-reference-index.ts
 │   │   │   ├── test-relation-analyzer.ts
 │   │   │   └── languages/
 │   │   │       ├── typescript-analyzer.ts

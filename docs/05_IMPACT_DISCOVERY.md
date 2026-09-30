@@ -254,35 +254,22 @@ Review checkout.ts.
 
 ## 9. Language strategy
 
-### V1
-JS/TS:
-- TypeScript compiler API or ts-morph optional;
-- imports/exports;
-- symbol text search.
+The default path is language-agnostic:
 
-Fallback:
-- `rg`/`git grep` for all languages.
+1. classify repository files as code, config, documentation, data, binary, or
+   generated/vendor;
+2. extract bounded identifier-like and text anchors from changed text files;
+3. build one repository reference index;
+4. produce evidence-backed candidates for untouched consumers;
+5. let Jev screen and OCR review the selected paths.
 
-### V2
-PHP:
-- Composer namespace/import mapping;
-- PHP parser or language server;
-- Laravel route/container/config conventions.
+This means adding a new text-based language does not require a new analyzer.
+Only exceptional precision rules should use a language-specific plugin, such
+as a parser, LSP, import resolver, or framework convention adapter. Those
+plugins are additive and must not be required for baseline discovery.
 
-### V3
-Go:
-- `go list`;
-- package imports;
-- `gopls` references/call hierarchy.
-
-Keep each language implementation behind:
-
-```ts
-interface LanguageImpactAnalyzer {
-  supports(path: string): boolean;
-  analyze(input: LanguageImpactInput): Promise<ImpactFragment>;
-}
-```
+Generic evidence is deliberately conservative: it can identify a reference
+without claiming a compiler-accurate call graph or type relationship.
 
 ## 10. Guardrails
 

@@ -3,18 +3,18 @@
 ## Purpose
 
 Extend deterministic structural impact discovery beyond JS/TS through a
-language-analyzer boundary. The first analyzers cover PHP/Laravel and Go, with
-the same conservative symbol-reference fallback available for Python and Java.
+language-agnostic repository classifier and reference index. PHP/Laravel, Go,
+Python, Java, and new text-based languages use the same conservative fallback;
+language-specific analyzers are optional precision plugins.
 
 ## Scope lock
 
 ### In scope
 
-- `LanguageImpactAnalyzer` interface and composition registration.
-- PHP/Laravel class/interface/trait/function references.
-- Go type/function references and package-local consumers.
-- Python class/function and Java class/interface/enum references through the
-  generic text fallback.
+- repository file classification without a JS/TS extension whitelist;
+- generic identifier/text reference indexing and candidate generation;
+- optional language-specific precision analyzers behind the same fragment
+  contract.
 - Evidence-backed nodes/edges/candidates with existing budgets and reasons.
 - Fixture tests proving untouched consumers are discovered.
 
@@ -27,11 +27,11 @@ the same conservative symbol-reference fallback available for Python and Java.
 
 ## Decisions
 
-### D10-001 - Additive analyzer boundary
+### D10-001 - Generic reference baseline
 
-Language analyzers implement the existing `ImpactFragment` contract and are
-registered in the composite analyzer. Existing JS/TS analyzers remain
-unchanged.
+The default composite path uses one generic reference analyzer. Existing
+language analyzers remain available as optional precision plugins and are not
+required for baseline multi-language support.
 
 ### D10-002 - Conservative text evidence
 
@@ -39,24 +39,26 @@ When a parser/LSP is unavailable, exported declaration anchors and consumer
 text references produce candidates. Every candidate includes a symbol and
 source path reason; no runtime/framework code is executed.
 
-### D10-003 - Preserve language scope in paths
+### D10-003 - Classify repository files, not languages
 
-Analyzers only compare files within the same supported language family, which
-prevents generic words in unrelated languages from creating cross-language
-fan-out.
+The classifier filters binary, generated, vendor, lock, and other data files.
+Generic code references may be compared across text-based source files, while
+config/event/string evidence can intentionally cross language boundaries.
 
 ## Action items
 
-[x] **P10-001** Add language analyzer interface and generic reference helper.
-[x] **P10-002** Implement PHP/Laravel and Go analyzers.
-[x] **P10-003** Add Python/Java fallback registrations.
-[x] **P10-004** Add multi-language fixture and regression coverage.
-[x] **P10-005** Run final release gates and update support documentation.
+[x] **P10-001** Add generic repository file classification.
+[x] **P10-002** Implement generic anchor extraction and reference indexing.
+[x] **P10-003** Register the generic analyzer in the composite graph.
+[x] **P10-004** Remove JS/TS-only screening and scope gates.
+[x] **P10-005** Add multi-language and unknown-extension regression coverage.
+[x] **P10-006** Run final release gates and update support documentation.
 
 ## Definition of done
 
-1. Untouched PHP and Go consumers become deterministic impact candidates.
-2. Python and Java source references use the same safe fallback boundary.
+1. Untouched consumers in PHP, Go, Python, Java, and an unknown source
+   extension become deterministic impact candidates.
+2. No dedicated analyzer is required for the generic path.
 3. Existing JS/TS, semantic, scope, verifier, checkpoint, and metrics behavior
    remains green.
 4. No repository code is executed by discovery.
@@ -69,7 +71,7 @@ npm run lint
 npm run boundaries
 npm test
 npm run evaluate
-npm audit
+npm audit --offline
 ```
 
 ## Implementation result
@@ -78,10 +80,14 @@ Status: Implemented and verified.
 
 Implementation evidence:
 
-- Added the `LanguageImpactAnalyzer` boundary and registered additive PHP,
-  Go, Python, and Java reference analyzers in the composite graph.
-- Added four language fixtures proving untouched consumer nodes, references,
-  and source-path evidence without executing a language runtime.
+- Added a repository file classifier, generic anchor extractor, and reference
+  index to the composite graph.
+- Removed JS/TS-only gates from discovery, screening, and OCR scope planning.
+- Added PHP, Go, Python, Java, and unknown-extension fixtures proving
+  untouched consumer nodes and source-path evidence without executing a
+  language runtime.
 - Verification passed: `npm run typecheck`, `npm run lint`,
-  `npm run boundaries`, `npm test` (27 files, 57 tests),
-  `npm run evaluate`, and `npm audit`.
+  `npm run boundaries`, `npm run evaluate`, `npm audit --offline`, and the
+  full test suite (29 files, 72 tests). The CLI child-process tests required a
+  temporary preload that supplies `os.userInfo()` because this Windows sandbox
+  returns `uv_os_get_passwd ... ENOMEM`; the preload was removed after the run.

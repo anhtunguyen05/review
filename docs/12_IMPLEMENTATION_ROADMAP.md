@@ -235,12 +235,10 @@ Only after this should you claim token/accuracy improvements.
 
 # Phase 10 — Additional languages
 
-Suggested order based on your likely use:
-1. PHP/Laravel;
-2. Go;
-3. Python/Java as needed.
-
-Add each via `LanguageImpactAnalyzer`.
+Use a repository file classifier and generic reference index as the default
+path. PHP/Laravel, Go, Python, Java, Rust, and future text-based languages do
+not require a dedicated analyzer. Add a language-specific parser or LSP only
+as an optional precision plugin when generic evidence is insufficient.
 
 ---
 

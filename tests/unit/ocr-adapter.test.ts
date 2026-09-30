@@ -96,4 +96,27 @@ describe("OCR CLI adapter", () => {
       "--context-path", "docs/contract.md", "--json",
     ]);
   });
+
+  it("passes non-JS source paths without language-specific adapter logic", async () => {
+    const runner = new StubProcessRunner(result({}));
+    const adapter = new OcrCliAdapter(runner, "trusted-ocr");
+
+    await adapter.review({
+      ...input,
+      scope: {
+        required: [],
+        candidates: [
+          { id: "direct:src/changed.php", location: { path: "src/changed.php" }, directChange: true, impactScore: 100, reasons: [{ kind: "DIRECT_CHANGE" }], estimatedTokens: 10 },
+          { id: "impact:src/consumer.rs", location: { path: "src/consumer.rs" }, directChange: false, impactScore: 80, reasons: [{ kind: "TEXT_REFERENCE", query: "PaymentService" }], estimatedTokens: 20 },
+        ],
+        excluded: [],
+        estimatedTokens: 30,
+        estimatedDurationMs: 60,
+      },
+    });
+
+    expect(runner.lastInput?.args).toEqual(expect.arrayContaining([
+      "--review-path", "src/changed.php", "--review-path", "src/consumer.rs",
+    ]));
+  });
 });

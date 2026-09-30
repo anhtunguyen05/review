@@ -162,7 +162,7 @@ const git = new GitCliAdapter();
 const github = new GitHubApiAdapter(octokit);
 const impact = new CompositeImpactAnalyzer([
   new ImportGraphAnalyzer(),
-  new TextReferenceAnalyzer(),
+  new GenericReferenceImpactAnalyzer(),
   new TestRelationAnalyzer(),
 ]);
 

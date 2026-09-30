@@ -1,7 +1,7 @@
 # code-review-orchestrator
 
-The repository now provides a local Phase 6 slice: Git range resolution,
-deterministic JS/TS structural impact discovery, screening through a trusted
+The repository now provides a local review slice: Git range resolution,
+deterministic multi-language structural impact discovery, screening through a trusted
 Jev-compatible executable, deterministic adaptive OCR scope planning, OCR
 normalization, grounded semantic impact discovery, versioned local artifacts,
 and idempotent GitHub publication.
@@ -32,9 +32,11 @@ are invoked only through explicitly configured trusted executables. Impact
 discovery reads Git snapshots through bounded, read-only commands. A
 changed-document intent pass writes `artifacts/intent.json`; deterministic
 concept matches can add evidence-backed `DOC_SEMANTIC` impact candidates.
-Structural language analyzers currently cover JS/TS, PHP/Laravel, Go, Python,
-and Java through bounded read-only source references; no repository runtime is
-executed during discovery.
+Impact discovery uses a language-agnostic repository text classifier and
+reference index, so PHP/Laravel, Go, Python, Java, Rust, and other text-based
+source files can enter the same bounded read-only pipeline without a dedicated
+analyzer for each language. Parser-specific analyzers remain optional precision
+plugins; no repository runtime is executed during discovery.
 Normalized OCR findings pass a fail-closed verification stage before
 `findings.json` or GitHub publication: duplicate engines are correlated,
 evidence is required, and confidence bounds severity.
@@ -53,9 +55,9 @@ artifacts/impact-graph.json
 ```
 
 The artifact contains deterministic nodes, structural edges, candidate scores,
-and evidence-backed reasons for JS/TS importers, symbol references, related
-tests, and config/schema consumers. Adaptive scope consumes those candidates
-and screening decisions before OCR.
+and evidence-backed reasons for importers, generic symbol/text references,
+related tests, and config/schema consumers across supported text files.
+Adaptive scope consumes those candidates and screening decisions before OCR.
 
 Impact limits can be supplied through the trusted `--config` YAML file:
 
@@ -93,7 +95,7 @@ npm run review -- \
 ```
 
 The screening adapter receives the resolved range and direct plus impacted
-JS/TS candidates and writes `artifacts/screening.json`. It produces `DEEP`,
+repository-source candidates and writes `artifacts/screening.json`. It produces `DEEP`,
 `LIGHT`, or `SKIP` decisions. The scope planner preserves direct changes,
 selects impacted files within configured budgets, records an exclusion reason
 for every skipped candidate, and writes `artifacts/scope.json`. If no screening

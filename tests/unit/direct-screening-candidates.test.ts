@@ -3,18 +3,20 @@ import { collectDirectScreeningCandidates, screeningCandidateId } from "../../sr
 import type { ChangedFile } from "../../src/domain/review/contracts.js";
 
 describe("direct screening candidates", () => {
-  it("collects only direct JS/TS source files with stable IDs", () => {
+  it("collects direct source files across languages with stable IDs", () => {
     const files: ChangedFile[] = [
       { path: "src/a.ts", status: "modified" },
       { path: "src/test.tsx", status: "added" },
+      { path: "src/service.php", status: "modified" },
+      { path: "src/worker.rs", status: "modified" },
       { path: "README.md", status: "modified" },
       { path: "node_modules/pkg/index.js", status: "modified" },
     ];
 
     const result = collectDirectScreeningCandidates(files);
 
-    expect(result.candidates).toHaveLength(2);
-    expect(result.candidates.map((candidate) => candidate.path)).toEqual(["src/a.ts", "src/test.tsx"]);
+    expect(result.candidates).toHaveLength(4);
+    expect(result.candidates.map((candidate) => candidate.path)).toEqual(["src/a.ts", "src/test.tsx", "src/service.php", "src/worker.rs"]);
     expect(result.candidates[0]?.id).toBe(screeningCandidateId(files[0]!));
     expect(result.diagnostics).toHaveLength(2);
   });

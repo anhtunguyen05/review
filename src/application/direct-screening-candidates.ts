@@ -1,6 +1,6 @@
 import type { ChangedFile, ScreeningCandidate } from "../domain/review/contracts.js";
+import { isReviewableSourcePath } from "../domain/review/source-support.js";
 
-const sourceExtensions = new Set([".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"]);
 const ignoredSegments = new Set([".git", "node_modules", "vendor", "dist", "build", "coverage"]);
 
 export interface DirectScreeningCandidates {
@@ -18,16 +18,9 @@ function isSafeRepositoryPath(path: string): boolean {
 
 function isScreenableSourcePath(path: string): boolean {
   const normalized = normalizePath(path);
-  const segments = normalized.toLowerCase().split("/");
-  const fileName = segments.at(-1) ?? "";
-  const extensionIndex = fileName.lastIndexOf(".");
-  const extension = extensionIndex < 0 ? "" : fileName.slice(extensionIndex);
-  const generated = fileName.includes(".generated.") || fileName.endsWith(".gen.ts") || fileName.endsWith(".gen.js");
   return (
     isSafeRepositoryPath(normalized) &&
-    !segments.some((segment) => ignoredSegments.has(segment)) &&
-    !generated &&
-    sourceExtensions.has(extension)
+    isReviewableSourcePath(normalized, [...ignoredSegments])
   );
 }
 
@@ -43,7 +36,7 @@ export function collectDirectScreeningCandidates(changedFiles: ChangedFile[]): D
 
   for (const file of changedFiles) {
     if (!isScreenableSourcePath(file.path)) {
-      diagnostics.push("Excluded non-screenable direct file: " + normalizePath(file.path));
+      diagnostics.push("Excluded non-screenable direct repository file: " + normalizePath(file.path));
       continue;
     }
 
