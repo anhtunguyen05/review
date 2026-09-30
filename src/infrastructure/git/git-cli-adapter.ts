@@ -68,6 +68,17 @@ export class GitCliAdapter implements GitRepositoryPort {
       });
   }
 
+  async isAncestor(input: { repositoryPath: string; ancestorSha: string; descendantSha: string }): Promise<boolean> {
+    const result = await this.processRunner.run({
+      command: this.command,
+      args: ["merge-base", "--is-ancestor", input.ancestorSha, input.descendantSha],
+      cwd: resolve(input.repositoryPath),
+      timeoutMs: this.timeoutMs,
+      maxOutputBytes: this.maxOutputBytes,
+    });
+    return result.exitCode === 0 && !result.timedOut && !result.outputLimitExceeded;
+  }
+
   private async run(cwd: string, args: string[]): Promise<string> {
     const result = await this.processRunner.run({
       command: this.command,

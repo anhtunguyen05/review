@@ -45,6 +45,21 @@ export interface IntentDiscoveryResult {
   diagnostics: string[];
 }
 
+export interface ReviewCheckpoint {
+  repositoryPath: string;
+  headSha: string;
+  configFingerprint: string;
+  runId: string;
+  completedAt: string;
+}
+
+export interface CheckpointRangeDecision {
+  mode: "incremental" | "full";
+  from: string;
+  usedCheckpoint: boolean;
+  diagnostics: string[];
+}
+
 export interface CodeLocation {
   path: string;
   startLine?: number;

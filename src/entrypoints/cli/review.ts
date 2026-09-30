@@ -1,13 +1,15 @@
 import { buildBootstrap } from "../../composition/build-bootstrap.js";
 import { buildLocalReview, createRunMetadata } from "../../composition/build-local-review.js";
 import { reviewLocalRange } from "../../application/review-local-range.js";
+import { configFingerprint, planCheckpointRange } from "../../application/plan-checkpoint-range.js";
+import { buildCheckpointStore } from "../../composition/build-checkpoint-store.js";
 import { logLevels, type LogLevel } from "../../application/ports/logger.js";
 
 const help = `code-review-orchestrator
 
 Usage:
   review --help
-  review [--config <path>] [--log-level <debug|info|warn|error>]
+  review [--config <path>] [--log-level <debug|info|warn|error>] [--checkpoint <path>] [--full]
   review --repo <path> --from <ref> --to <ref> [--output <dir>] [--ocr-command <path>] [--ocr-arg <arg>]
          [--screening-command <path>] [--screening-arg <arg>]
 
@@ -21,6 +23,7 @@ Usage:
   Impact and OCR scope limits are configured under the trusted --config YAML file.
   The OCR executable may also be supplied with OCR_COMMAND.
   The screening executable may be supplied with SCREENING_COMMAND.
+  A checkpoint is used only with --checkpoint; --full always bypasses it.
 `;
 
 interface ParsedArgs {
@@ -35,6 +38,8 @@ interface ParsedArgs {
   ocrArgs: string[];
   screeningCommand?: string;
   screeningArgs: string[];
+  checkpointPath?: string;
+  full: boolean;
 }
 
 function fail(message: string): never {
@@ -60,6 +65,8 @@ function parseArgs(args: string[]): ParsedArgs {
   const ocrArgs: string[] = [];
   let screeningCommand: string | undefined;
   const screeningArgs: string[] = [];
+  let checkpointPath: string | undefined;
+  let full = false;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -97,6 +104,11 @@ function parseArgs(args: string[]): ParsedArgs {
     } else if (arg === "--screening-arg") {
       screeningArgs.push(requiredValue(args, index, "--screening-arg"));
       index += 1;
+    } else if (arg === "--checkpoint") {
+      checkpointPath = requiredValue(args, index, "--checkpoint");
+      index += 1;
+    } else if (arg === "--full") {
+      full = true;
     } else {
       fail("unknown option: " + arg);
     }
@@ -114,6 +126,8 @@ function parseArgs(args: string[]): ParsedArgs {
     ocrArgs,
     ...(screeningCommand === undefined ? {} : { screeningCommand }),
     screeningArgs,
+    ...(checkpointPath === undefined ? {} : { checkpointPath }),
+    full,
   };
 }
 
@@ -139,17 +153,50 @@ export async function run(args: string[]): Promise<number> {
   if (!ocrCommand) fail("--ocr-command or OCR_COMMAND is required for a Phase 1 review");
   const screeningCommand = parsed.screeningCommand ?? process.env.SCREENING_COMMAND;
 
+  const dependencies = buildLocalReview(ocrCommand, parsed.ocrArgs, screeningCommand, parsed.screeningArgs, bootstrap.config.impact, bootstrap.config.scope);
+  let reviewFrom = parsed.from;
+  let rangeDiagnostics: string[] = [];
+  let checkpointStore: ReturnType<typeof buildCheckpointStore> | undefined;
+  if (parsed.checkpointPath) {
+    checkpointStore = buildCheckpointStore(parsed.checkpointPath);
+    const requestedRange = await dependencies.git.resolveRange({ repositoryPath: parsed.repositoryPath, from: parsed.from, to: parsed.to });
+    const checkpoint = await checkpointStore.load();
+    const descendantVerified = checkpoint !== undefined && dependencies.git.isAncestor !== undefined
+      ? await dependencies.git.isAncestor({ repositoryPath: parsed.repositoryPath, ancestorSha: checkpoint.headSha, descendantSha: requestedRange.headSha })
+      : false;
+    const decision = planCheckpointRange({
+      requestedFrom: parsed.from,
+      configFingerprint: configFingerprint(bootstrap.config),
+      ...(checkpoint === undefined ? {} : { checkpoint }),
+      descendantVerified,
+      forceFull: parsed.full,
+    });
+    reviewFrom = decision.from;
+    rangeDiagnostics = decision.diagnostics;
+  } else if (parsed.full) {
+    rangeDiagnostics = ["Full review was explicitly requested"];
+  }
   const metadata = createRunMetadata();
   const result = await reviewLocalRange(
     {
       repositoryPath: parsed.repositoryPath,
-      from: parsed.from,
+      from: reviewFrom,
       to: parsed.to,
       outputDirectory: parsed.outputDirectory ?? "artifacts",
+      rangeDiagnostics,
       ...metadata,
     },
-    buildLocalReview(ocrCommand, parsed.ocrArgs, screeningCommand, parsed.screeningArgs, bootstrap.config.impact, bootstrap.config.scope),
+    dependencies,
   );
+  if (checkpointStore && result.status === "ok") {
+    await checkpointStore.save({
+      repositoryPath: result.artifacts.run.data.repositoryPath,
+      headSha: result.artifacts.run.data.headSha,
+      configFingerprint: configFingerprint(bootstrap.config),
+      runId: result.runId,
+      completedAt: metadata.createdAt,
+    });
+  }
   process.stdout.write(
     "Review " + result.status + ": " + result.findingsCount + " finding(s), run " + result.runId + "\n",
   );

@@ -34,7 +34,7 @@ jobs:
           SCREENING_COMMAND: ${{ vars.SCREENING_COMMAND }}
         run: >-
           npm run review -- --repo . --from origin/${{ github.event.repository.default_branch }}
-          --to ${{ github.sha }} --output artifacts
+          --to ${{ github.sha }} --output artifacts --checkpoint artifacts/checkpoint.json
       - name: Publish review
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

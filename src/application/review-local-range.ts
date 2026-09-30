@@ -29,6 +29,7 @@ export interface LocalReviewInput {
   createdAt: string;
   title?: string;
   body?: string;
+  rangeDiagnostics?: string[];
 }
 
 export interface LocalReviewDependencies {
@@ -173,6 +174,7 @@ export async function reviewLocalRange(
       changedFiles,
       status,
       diagnostics: [
+        ...(input.rangeDiagnostics ?? []).map((item) => "Range: " + item),
         ...impact.diagnostics.map((item) => "Impact: " + item),
         ...intentDiagnostics.map((item) => "Intent: " + item),
         ...intent.diagnostics.map((item) => "Intent: " + item),
