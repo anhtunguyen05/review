@@ -11,6 +11,7 @@ export class FileSystemArtifactStore implements ArtifactStore {
       this.write(directory, "run.json", artifacts.run),
       this.write(directory, "screening.json", artifacts.screening),
       this.write(directory, "impact-graph.json", artifacts.impact),
+      this.write(directory, "scope.json", artifacts.scope),
       this.write(directory, "ocr.raw.json", artifacts.ocrRaw),
       this.write(directory, "findings.json", artifacts.findings),
     ]);

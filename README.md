@@ -1,9 +1,10 @@
 # code-review-orchestrator
 
-The repository now provides a local Phase 4 slice: Git range resolution,
-deterministic JS/TS structural impact discovery, direct screening through a
-trusted Jev-compatible executable, OCR normalization, and versioned local
-artifacts. GitHub publication and adaptive OCR scope remain deferred.
+The repository now provides a local Phase 5 slice: Git range resolution,
+deterministic JS/TS structural impact discovery, screening through a trusted
+Jev-compatible executable, deterministic adaptive OCR scope planning, OCR
+normalization, and versioned local artifacts. GitHub publication remains
+deferred.
 
 ## Runtime
 
@@ -40,8 +41,8 @@ artifacts/impact-graph.json
 
 The artifact contains deterministic nodes, structural edges, candidate scores,
 and evidence-backed reasons for JS/TS importers, symbol references, related
-tests, and config/schema consumers. Discovery keeps direct changed files and
-does not yet reduce the OCR file set; adaptive OCR scope is Phase 5.
+tests, and config/schema consumers. Adaptive scope consumes those candidates
+and screening decisions before OCR.
 
 Impact limits can be supplied through the trusted `--config` YAML file:
 
@@ -53,6 +54,16 @@ impact:
   maxFileBytes: 524288
   includeTests: true
   includeDocs: true
+```
+
+Adaptive OCR budgets can be configured separately:
+
+```yaml
+scope:
+  maxCandidateFiles: 80
+  maxDeepReviewFiles: 20
+  maxInputTokens: 150000
+  maxDurationMs: 600000
 ```
 
 ## Local screening review
@@ -68,10 +79,11 @@ npm run review -- \
   --screening-command /path/to/jev-screening
 ```
 
-The screening adapter receives the resolved range and direct JS/TS candidates
-and writes `artifacts/screening.json`. It produces `DEEP`, `LIGHT`, or `SKIP`
-decisions, but Phase 4 does not yet use those decisions or impact candidates
-to reduce the OCR file set. If no screening command is configured, screening
-is explicitly disabled; if discovery or screening fails, OCR continues and
-the run is marked `partial` without fabricated candidates or decisions.
+The screening adapter receives the resolved range and direct plus impacted
+JS/TS candidates and writes `artifacts/screening.json`. It produces `DEEP`,
+`LIGHT`, or `SKIP` decisions. The scope planner preserves direct changes,
+selects impacted files within configured budgets, records an exclusion reason
+for every skipped candidate, and writes `artifacts/scope.json`. If no screening
+command is configured, screening is explicitly disabled; impacted files then
+degrade to direct-only review without fabricated candidates or decisions.
 

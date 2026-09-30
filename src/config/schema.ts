@@ -29,6 +29,15 @@ export const bootstrapConfigSchema = z
       .strict()
       .default({ level: "info" }),
     impact: impactConfigSchema,
+    scope: z
+      .object({
+        maxCandidateFiles: z.number().int().positive().max(10_000).default(80),
+        maxDeepReviewFiles: z.number().int().positive().max(10_000).default(20),
+        maxInputTokens: z.number().int().positive().default(150_000),
+        maxDurationMs: z.number().int().positive().default(600_000),
+      })
+      .strict()
+      .default({ maxCandidateFiles: 80, maxDeepReviewFiles: 20, maxInputTokens: 150_000, maxDurationMs: 600_000 }),
   })
   .strict();
 
@@ -45,5 +54,6 @@ export const defaultBootstrapConfig: BootstrapConfig = {
     includeDocs: true,
     ignoredPathSegments: [".git", "node_modules", "vendor", "dist", "build", "coverage"],
   },
+  scope: { maxCandidateFiles: 80, maxDeepReviewFiles: 20, maxInputTokens: 150_000, maxDurationMs: 600_000 },
 };
 

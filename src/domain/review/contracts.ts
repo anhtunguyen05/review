@@ -123,6 +123,8 @@ export interface ReviewFinding {
 
 export interface DeepReviewInput extends GitReviewRange {
   changedFiles: ChangedFile[];
+  scope?: ReviewScope;
+  background?: ReviewBackground;
 }
 
 export interface ScreeningCandidate {
@@ -130,7 +132,9 @@ export interface ScreeningCandidate {
   path: string;
   status: ChangedFileStatus;
   previousPath?: string;
-  directChange: true;
+  directChange: boolean;
+  impactScore?: number;
+  reasons?: ImpactReason[];
 }
 
 export interface ScreeningInput extends GitReviewRange {
@@ -157,6 +161,65 @@ export interface ScreeningResult {
   decisions: ScreeningDecision[];
   rawOutput: string;
   rawJson: unknown;
+  diagnostics: string[];
+  error?: string;
+}
+
+export interface ReviewBudget {
+  maxCandidateFiles: number;
+  maxDeepReviewFiles: number;
+  maxInputTokens: number;
+  maxDurationMs: number;
+}
+
+export interface ScopeCandidate {
+  id: string;
+  location: CodeLocation;
+  directChange: boolean;
+  impactScore: number;
+  reasons: ImpactReason[];
+  estimatedTokens: number;
+}
+
+export type ScopeExclusionReason =
+  | "LOW_RELEVANCE"
+  | "BUDGET"
+  | "TOO_LARGE"
+  | "SCREENING_UNAVAILABLE"
+  | "UNSUPPORTED_PATH";
+
+export interface ScopeExclusion {
+  candidateId: string;
+  path: string;
+  reason: ScopeExclusionReason;
+  detail?: string;
+}
+
+export interface ReviewScope {
+  required: ScopeCandidate[];
+  candidates: ScopeCandidate[];
+  excluded: ScopeExclusion[];
+  estimatedTokens: number;
+  estimatedDurationMs: number;
+}
+
+export interface ReviewBackground {
+  reviewFocus: string[];
+  selectedImpacts: Array<{
+    candidateId: string;
+    path: string;
+    score: number;
+    reasons: ImpactReason[];
+    evidence: string[];
+  }>;
+  contextPaths: string[];
+  degraded: string[];
+}
+
+export interface ScopePlanningResult {
+  status: "ok" | "partial" | "failed";
+  scope: ReviewScope;
+  background: ReviewBackground;
   diagnostics: string[];
   error?: string;
 }
@@ -202,6 +265,13 @@ export interface ReviewRunArtifacts {
   impact: ArtifactEnvelope<{
     status: ImpactDiscoveryResult["status"];
     graph: ImpactGraph;
+    diagnostics: string[];
+    error?: string;
+  }>;
+  scope: ArtifactEnvelope<{
+    status: ScopePlanningResult["status"];
+    scope: ReviewScope;
+    background: ReviewBackground;
     diagnostics: string[];
     error?: string;
   }>;

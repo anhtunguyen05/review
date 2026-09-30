@@ -7,6 +7,8 @@ export interface OcrCliOptions {
   commandArgs?: string[];
   timeoutMs?: number;
   maxOutputBytes?: number;
+  reviewPathArg?: string;
+  contextPathArg?: string;
 }
 
 export class OcrCliAdapter implements DeepReviewEngine {
@@ -17,6 +19,8 @@ export class OcrCliAdapter implements DeepReviewEngine {
   ) {}
 
   async review(input: DeepReviewInput): Promise<DeepReviewResult> {
+    const reviewPathArg = this.options.reviewPathArg ?? "--review-path";
+    const contextPathArg = this.options.contextPathArg ?? "--context-path";
     const result = await this.processRunner.run({
       command: this.command,
       args: [
@@ -27,6 +31,8 @@ export class OcrCliAdapter implements DeepReviewEngine {
         input.from,
         "--to",
         input.to,
+        ...(input.scope?.candidates.flatMap((candidate) => [reviewPathArg, candidate.location.path]) ?? []),
+        ...(input.background?.contextPaths.flatMap((path) => [contextPathArg, path]) ?? []),
         "--json",
       ],
       cwd: input.repositoryPath,

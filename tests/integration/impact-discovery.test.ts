@@ -56,6 +56,8 @@ describe("Phase 4 impact discovery", () => {
         git: new GitCliAdapter(processRunner),
         impact: new CompositeImpactAnalyzer(new GitContentAdapter(processRunner)),
         impactPolicy: defaultImpactPolicy,
+        content: new GitContentAdapter(processRunner),
+        scopeBudget: { maxCandidateFiles: 80, maxDeepReviewFiles: 20, maxInputTokens: 150_000, maxDurationMs: 600_000 },
         screening: new DisabledScreeningEngine(),
         deepReview: new NoopDeepReview(),
         artifacts: new FileSystemArtifactStore(),
@@ -67,7 +69,7 @@ describe("Phase 4 impact discovery", () => {
       data: { graph: { candidates: Array<{ id: string; reasons: Array<{ kind: string }> }> } };
     };
     const checkout = artifact.data.graph.candidates.find((candidate) => candidate.id === "impact:src/checkout.ts");
-    expect(result.status).toBe("ok");
+    expect(result.status).toBe("partial");
     expect(artifact.reviewedHeadSha).toMatch(/^[0-9a-f]{40}$/);
     expect(checkout?.reasons.map((reason) => reason.kind)).toEqual(expect.arrayContaining(["IMPORTER", "SYMBOL_REFERENCE"]));
   });

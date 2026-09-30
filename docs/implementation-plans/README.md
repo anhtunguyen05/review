@@ -21,3 +21,4 @@ This folder contains execution details for the phases listed in
 - [Phase 3](phase-3.md) — Jev screening adapter and direct-file local screening; GitHub publication, impact discovery, and adaptive OCR scope remain out of scope.
 - [Phase 4](phase-4.md) — structural JS/TS impact discovery; adaptive OCR scope remains out of scope.
 
+- [Phase 5](phase-5.md) - adaptive, budgeted OCR scope with persisted selection and exclusion reasons.

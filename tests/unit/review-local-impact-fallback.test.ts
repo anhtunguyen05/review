@@ -5,6 +5,7 @@ import type { DeepReviewEngine } from "../../src/application/ports/deep-review-e
 import type { GitRepositoryPort } from "../../src/application/ports/git-repository.js";
 import type { ImpactAnalyzer } from "../../src/application/ports/impact-analyzer.js";
 import type { ScreeningEngine } from "../../src/application/ports/screening-engine.js";
+import type { RepositoryContentPort } from "../../src/application/ports/repository-content.js";
 import { defaultImpactPolicy } from "../../src/domain/review/impact-policy.js";
 import type { ChangedFile, GitReviewRange, ImpactDiscoveryResult, ScreeningResult } from "../../src/domain/review/contracts.js";
 
@@ -47,6 +48,16 @@ class SuccessfulReview implements DeepReviewEngine {
   }
 }
 
+class StubContent implements RepositoryContentPort {
+  async listFiles(): Promise<string[]> {
+    return changedFiles.map((file) => file.path);
+  }
+
+  async readFile(): Promise<string> {
+    return "export const changed = true;\n";
+  }
+}
+
 class CaptureArtifacts implements ArtifactStore {
   artifacts?: Parameters<ArtifactStore["save"]>[1];
 
@@ -64,6 +75,8 @@ describe("reviewLocalRange impact fallback", () => {
         git: new StubGit(),
         impact: new FailedImpact(),
         impactPolicy: defaultImpactPolicy,
+        content: new StubContent(),
+        scopeBudget: { maxCandidateFiles: 80, maxDeepReviewFiles: 20, maxInputTokens: 150_000, maxDurationMs: 600_000 },
         screening: new DisabledScreening(),
         deepReview: new SuccessfulReview(),
         artifacts,

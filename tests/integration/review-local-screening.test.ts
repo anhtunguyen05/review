@@ -66,10 +66,16 @@ describe("Phase 3 local screening", () => {
       reviewedHeadSha: string;
       data: { changedFiles: Array<{ path: string }> };
     };
+    const scope = JSON.parse(await readFile(join(outputDirectory, "scope.json"), "utf8")) as {
+      reviewedHeadSha: string;
+      data: { scope: { candidates: Array<{ location: { path: string } }> } };
+    };
 
     expect(screening.reviewedHeadSha).toBe(run.reviewedHeadSha);
+    expect(scope.reviewedHeadSha).toBe(run.reviewedHeadSha);
     expect(screening.data.status).toBe("ok");
     expect(screening.data.decisions.map((decision) => decision.action)).toEqual(["DEEP", "LIGHT", "SKIP"]);
+    expect(scope.data.scope.candidates.map((candidate) => candidate.location.path)).toEqual(["src/a.ts", "src/b.ts", "src/c.ts"]);
     expect(run.data.changedFiles.map((file) => file.path)).toEqual(["README.md", "src/a.ts", "src/b.ts", "src/c.ts"]);
   });
 

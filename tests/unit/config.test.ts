@@ -23,6 +23,7 @@ describe("bootstrap configuration", () => {
         includeDocs: true,
         ignoredPathSegments: [".git", "node_modules", "vendor", "dist", "build", "coverage"],
       },
+      scope: { maxCandidateFiles: 80, maxDeepReviewFiles: 20, maxInputTokens: 150_000, maxDurationMs: 600_000 },
     });
   });
 
@@ -43,6 +44,7 @@ describe("bootstrap configuration", () => {
         includeDocs: true,
         ignoredPathSegments: [".git", "node_modules", "vendor", "dist", "build", "coverage"],
       },
+      scope: { maxCandidateFiles: 80, maxDeepReviewFiles: 20, maxInputTokens: 150_000, maxDurationMs: 600_000 },
     });
   });
 

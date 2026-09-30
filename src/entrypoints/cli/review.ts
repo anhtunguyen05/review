@@ -13,10 +13,11 @@ Usage:
 
   Local review:
   Resolves merge-base(from, to), discovers structural JS/TS impact, screens
-  direct files when a trusted screening executable is configured, invokes OCR,
-  and writes run.json, impact-graph.json, screening.json, ocr.raw.json, and
-  findings.json to the output directory.
-  Impact limits are configured under the trusted --config YAML file.
+  direct and impacted files when a trusted screening executable is configured,
+  plans a bounded OCR scope, invokes OCR, and writes run.json,
+  impact-graph.json, screening.json, scope.json, ocr.raw.json, and findings.json
+  to the output directory.
+  Impact and OCR scope limits are configured under the trusted --config YAML file.
   The OCR executable may also be supplied with OCR_COMMAND.
   The screening executable may be supplied with SCREENING_COMMAND.
 `;
@@ -146,7 +147,7 @@ export async function run(args: string[]): Promise<number> {
       outputDirectory: parsed.outputDirectory ?? "artifacts",
       ...metadata,
     },
-    buildLocalReview(ocrCommand, parsed.ocrArgs, screeningCommand, parsed.screeningArgs, bootstrap.config.impact),
+    buildLocalReview(ocrCommand, parsed.ocrArgs, screeningCommand, parsed.screeningArgs, bootstrap.config.impact, bootstrap.config.scope),
   );
   process.stdout.write(
     "Review " + result.status + ": " + result.findingsCount + " finding(s), run " + result.runId + "\n",
