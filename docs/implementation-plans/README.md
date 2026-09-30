@@ -26,3 +26,4 @@ This folder contains execution details for the phases listed in
 - [Phase 6](phase-6.md) - grounded intent and deterministic semantic impact discovery.
 - [Phase 7](phase-7.md) - post-review verification, correlation, and duplicate consolidation.
 - [Phase 8](phase-8.md) - checkpointed incremental review with safe full fallback.
+- [Phase 9](phase-9.md) - run metrics and deterministic evaluation fixtures.

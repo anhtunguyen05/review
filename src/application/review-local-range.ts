@@ -15,6 +15,7 @@ import type {
   ImpactDiscoveryResult,
   ReviewBudget,
   IntentDiscoveryResult,
+  ReviewMetrics,
   ScopePlanningResult,
   ReviewRunArtifacts,
   ScreeningResult,
@@ -50,6 +51,7 @@ export interface LocalReviewResult {
   impactCandidatesCount: number;
   scope: ScopePlanningResult;
   intent: IntentDiscoveryResult;
+  metrics: ReviewMetrics;
   screeningDecisionsCount: number;
   artifacts: ReviewRunArtifacts;
 }
@@ -67,8 +69,11 @@ export async function reviewLocalRange(
   input: LocalReviewInput,
   dependencies: LocalReviewDependencies,
 ): Promise<LocalReviewResult> {
+  const reviewStartedAt = Date.now();
+  const stageDurationsMs: Record<string, number> = {};
   const range = await dependencies.git.resolveRange(input);
   const changedFiles = await dependencies.git.getChangedFiles(range);
+  let stageStartedAt = Date.now();
   const intentDocuments: Array<{ path: string; content: string }> = [];
   const intentDiagnostics: string[] = [];
   for (const file of changedFiles) {
@@ -87,6 +92,8 @@ export async function reviewLocalRange(
     }
   }
   const intent = discoverChangeIntent({ changedFiles, documents: intentDocuments, ...(input.title === undefined ? {} : { title: input.title }), ...(input.body === undefined ? {} : { body: input.body }) });
+  stageDurationsMs.intent = Date.now() - stageStartedAt;
+  stageStartedAt = Date.now();
   let impact: ImpactDiscoveryResult;
   try {
     impact = await dependencies.impact.discover({ ...range, changedFiles, policy: dependencies.impactPolicy, intent: intent.intent });
@@ -94,6 +101,8 @@ export async function reviewLocalRange(
     const message = error instanceof Error ? error.message : "Impact discovery failed";
     impact = { status: "failed", graph: { nodes: [], edges: [], candidates: [] }, diagnostics: [message], error: message };
   }
+  stageDurationsMs.impact = Date.now() - stageStartedAt;
+  stageStartedAt = Date.now();
   const screeningCandidates = collectReviewScreeningCandidates(changedFiles, impact.graph);
   let screening: ScreeningResult;
 
@@ -120,9 +129,11 @@ export async function reviewLocalRange(
       };
     }
   }
+  stageDurationsMs.screening = Date.now() - stageStartedAt;
 
   const estimatedTokensByPath: Record<string, number> = {};
   const scopeDiagnostics: string[] = [];
+  stageStartedAt = Date.now();
   for (const candidate of screeningCandidates.candidates) {
     try {
       const content = await dependencies.content.readFile({ repositoryPath: range.repositoryPath, commitSha: range.headSha, path: candidate.path });
@@ -139,8 +150,10 @@ export async function reviewLocalRange(
     budget: dependencies.scopeBudget,
     estimatedTokensByPath,
   });
+  stageDurationsMs.scope = Date.now() - stageStartedAt;
 
   let deepReview: DeepReviewResult;
+  stageStartedAt = Date.now();
 
   try {
     deepReview = await dependencies.deepReview.review({ ...range, changedFiles, scope: scope.scope, background: scope.background });
@@ -155,7 +168,10 @@ export async function reviewLocalRange(
       error: message,
     };
   }
+  stageDurationsMs.deepReview = Date.now() - stageStartedAt;
+  stageStartedAt = Date.now();
   const verification = verifyReviewFindings({ findings: deepReview.findings, changedFiles });
+  stageDurationsMs.verification = Date.now() - stageStartedAt;
 
   const screeningDiagnostics = [...screeningCandidates.diagnostics, ...screening.diagnostics];
   const status = deepReview.status === "failed"
@@ -163,6 +179,28 @@ export async function reviewLocalRange(
     : screening.status === "failed" || impact.status === "failed" || scope.status === "partial" || verification.status === "partial"
       ? "partial"
       : "ok";
+  const metrics: ReviewMetrics = {
+    stageDurationsMs,
+    changedFiles: changedFiles.length,
+    impactCandidates: impact.graph.candidates.length,
+    screenedCandidates: screening.decisions.length,
+    skipCount: screening.decisions.filter((decision) => decision.action === "SKIP").length,
+    lightCount: screening.decisions.filter((decision) => decision.action === "LIGHT").length,
+    deepCount: screening.decisions.filter((decision) => decision.action === "DEEP").length,
+    ocrFiles: scope.scope.candidates.length,
+    estimatedOcrInputTokens: scope.scope.estimatedTokens,
+    rawFindings: deepReview.findings.length,
+    verifiedFindings: verification.findings.length,
+    duplicatesRemoved: verification.mergedClusters,
+    suppressedFindings: verification.suppressedFindings,
+    degradedStages: [
+      ...(impact.status === "failed" ? ["impact"] : []),
+      ...(screening.status !== "ok" ? ["screening"] : []),
+      ...(scope.status !== "ok" ? ["scope"] : []),
+      ...(verification.status !== "ok" ? ["verification"] : []),
+    ],
+    totalDurationMs: Date.now() - reviewStartedAt,
+  };
   const artifacts: ReviewRunArtifacts = {
     run: envelope(input.runId, input.createdAt, range.headSha, {
       repositoryPath: range.repositoryPath,
@@ -173,6 +211,7 @@ export async function reviewLocalRange(
       mergeBaseSha: range.mergeBaseSha,
       changedFiles,
       status,
+      metrics,
       diagnostics: [
         ...(input.rangeDiagnostics ?? []).map((item) => "Range: " + item),
         ...impact.diagnostics.map((item) => "Impact: " + item),
@@ -229,6 +268,7 @@ export async function reviewLocalRange(
     impactCandidatesCount: impact.graph.candidates.length,
     scope,
     intent,
+    metrics,
     screeningDecisionsCount: screening.decisions.length,
     artifacts,
   };

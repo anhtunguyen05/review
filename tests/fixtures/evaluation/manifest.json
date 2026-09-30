@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "enum-pending-001",
+      "mode": "adaptive",
+      "expectedImpactedPaths": [
+        "src/order/checkout.ts"
+      ],
+      "expectedMechanisms": [
+        "DOC_SEMANTIC",
+        "SYMBOL_REFERENCE"
+      ]
+    }
+  ]
+}

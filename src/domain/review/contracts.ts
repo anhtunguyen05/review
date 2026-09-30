@@ -327,6 +327,24 @@ export interface VerificationResult {
   suppressedFindings: number;
 }
 
+export interface ReviewMetrics {
+  stageDurationsMs: Record<string, number>;
+  changedFiles: number;
+  impactCandidates: number;
+  screenedCandidates: number;
+  skipCount: number;
+  lightCount: number;
+  deepCount: number;
+  ocrFiles: number;
+  estimatedOcrInputTokens: number;
+  rawFindings: number;
+  verifiedFindings: number;
+  duplicatesRemoved: number;
+  suppressedFindings: number;
+  degradedStages: string[];
+  totalDurationMs: number;
+}
+
 export interface ArtifactEnvelope<T> {
   schemaVersion: 1;
   runId: string;
@@ -346,6 +364,7 @@ export interface ReviewRunArtifacts {
     changedFiles: ChangedFile[];
     status: "ok" | "partial" | "failed";
     diagnostics: string[];
+    metrics: ReviewMetrics;
   }>;
   screening: ArtifactEnvelope<{
     status: ScreeningResult["status"];

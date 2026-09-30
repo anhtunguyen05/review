@@ -45,7 +45,7 @@ describe("Phase 1 local review", () => {
 
     expect(stdout).toMatch(/Review ok: 1 finding\(s\), run [0-9a-f-]+/);
     const run = JSON.parse(await readFile(join(outputDirectory, "run.json"), "utf8")) as {
-      data: { mergeBaseSha: string; changedFiles: Array<{ path: string; status: string }> };
+      data: { mergeBaseSha: string; changedFiles: Array<{ path: string; status: string }>; metrics: { changedFiles: number; estimatedOcrInputTokens: number; totalDurationMs: number } };
     };
     const findings = JSON.parse(await readFile(join(outputDirectory, "findings.json"), "utf8")) as {
       data: { findings: Array<{ sourceEngines: string[]; primaryLocation: { path: string } }> };
@@ -55,6 +55,9 @@ describe("Phase 1 local review", () => {
     };
 
     expect(run.data.mergeBaseSha).toMatch(/^[0-9a-f]{40}$/);
+    expect(run.data.metrics).toMatchObject({ changedFiles: 1 });
+    expect(run.data.metrics.estimatedOcrInputTokens).toBeGreaterThanOrEqual(0);
+    expect(run.data.metrics.totalDurationMs).toBeGreaterThanOrEqual(0);
     expect(run.data.changedFiles).toEqual([{ path: "src-placeholder", status: "added" }]);
     expect(findings.data.findings[0]).toMatchObject({
       sourceEngines: ["ocr"],

@@ -37,6 +37,9 @@ Normalized OCR findings pass a fail-closed verification stage before
 evidence is required, and confidence bounds severity.
 Use `--checkpoint <path>` for verified incremental review; `--full` forces the
 requested range and stale/config-mismatched checkpoints fall back automatically.
+Run metrics are persisted in `run.json`; `npm run evaluate` validates the
+provider-free evaluation manifest. These metrics are operational estimates,
+not provider billing or accuracy claims.
 
 ## Local impact discovery
 

@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "boundaries": "node scripts/check-boundaries.mjs",
     "test": "vitest run",
+    "evaluate": "node scripts/evaluate-fixtures.mjs",
     "review": "tsx src/entrypoints/cli/review.ts",
     "publish-review": "tsx src/entrypoints/cli/publish-review.ts"
   },
