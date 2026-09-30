@@ -13,6 +13,23 @@ export interface ChangedFile {
   path: string;
   status: ChangedFileStatus;
   previousPath?: string;
+  additions?: number;
+  deletions?: number;
+  patch?: string;
+}
+
+export interface PullRequestContext {
+  owner: string;
+  repository: string;
+  prNumber: number;
+  title: string;
+  body: string;
+  baseRef: string;
+  baseSha: string;
+  headRef: string;
+  headSha: string;
+  mergeBaseSha: string;
+  changedFiles: ChangedFile[];
 }
 
 export interface CodeLocation {
@@ -125,6 +142,46 @@ export interface DeepReviewInput extends GitReviewRange {
   changedFiles: ChangedFile[];
   scope?: ReviewScope;
   background?: ReviewBackground;
+}
+
+export type PublicationDisposition = "INLINE" | "SUMMARY" | "SUPPRESSED";
+
+export interface PublicationDecision {
+  finding: ReviewFinding;
+  disposition: PublicationDisposition;
+  reason: string;
+}
+
+export interface ReviewRunSummary {
+  changedFiles: number;
+  impactCandidates: number;
+  screenedCandidates: number;
+  deepReviewedFiles: number;
+  inlineFindings: number;
+  summaryFindings: number;
+  suppressedFindings: number;
+  degradedStages: string[];
+  durationMs: number;
+}
+
+export interface PublicationPlan {
+  runId: string;
+  owner: string;
+  repository: string;
+  prNumber: number;
+  reviewedHeadSha: string;
+  decisions: PublicationDecision[];
+  summary: ReviewRunSummary;
+}
+
+export interface PublicationResult {
+  status: "ok" | "partial" | "failed";
+  reviewedHeadSha: string;
+  summaryComment: "created" | "updated" | "unchanged" | "skipped";
+  inlinePublished: number;
+  inlineSkipped: number;
+  diagnostics: string[];
+  error?: string;
 }
 
 export interface ScreeningCandidate {

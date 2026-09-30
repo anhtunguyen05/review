@@ -1,0 +1,43 @@
+name: Review orchestrator
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to review
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: review-${{ github.repository }}-${{ inputs.pr_number }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Run local review
+        env:
+          OCR_COMMAND: ${{ vars.OCR_COMMAND }}
+          SCREENING_COMMAND: ${{ vars.SCREENING_COMMAND }}
+        run: >-
+          npm run review -- --repo . --from origin/${{ github.event.repository.default_branch }}
+          --to ${{ github.sha }} --output artifacts
+      - name: Publish review
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+        run: npm run publish-review -- --artifacts artifacts

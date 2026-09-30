@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "boundaries": "node scripts/check-boundaries.mjs",
     "test": "vitest run",
-    "review": "tsx src/entrypoints/cli/review.ts"
+    "review": "tsx src/entrypoints/cli/review.ts",
+    "publish-review": "tsx src/entrypoints/cli/publish-review.ts"
   },
   "dependencies": {
     "yaml": "^2.7.0",

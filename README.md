@@ -3,8 +3,7 @@
 The repository now provides a local Phase 5 slice: Git range resolution,
 deterministic JS/TS structural impact discovery, screening through a trusted
 Jev-compatible executable, deterministic adaptive OCR scope planning, OCR
-normalization, and versioned local artifacts. GitHub publication remains
-deferred.
+normalization, versioned local artifacts, and idempotent GitHub publication.
 
 ## Runtime
 
@@ -86,4 +85,18 @@ selects impacted files within configured budgets, records an exclusion reason
 for every skipped candidate, and writes `artifacts/scope.json`. If no screening
 command is configured, screening is explicitly disabled; impacted files then
 degrade to direct-only review without fabricated candidates or decisions.
+
+## GitHub publication
+
+The manual publication entrypoint resolves PR context through GitHub REST,
+updates one sticky summary, and publishes eligible changed-file findings as
+idempotent inline comments:
+
+```bash
+npm run publish-review -- --artifacts artifacts --owner acme --repo demo --pr 7
+```
+
+Set `GITHUB_TOKEN` for authentication. The publisher re-checks the PR head SHA
+before writing and skips stale runs. A manual `workflow_dispatch` example is in
+`.github/workflows/review.yml`.
 
