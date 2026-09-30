@@ -7,6 +7,7 @@ import type { RepositoryContentPort } from "./ports/repository-content.js";
 import { collectReviewScreeningCandidates } from "./review-scope-candidates.js";
 import { planReviewScope } from "./plan-review-scope.js";
 import { discoverChangeIntent } from "./discover-change-intent.js";
+import { verifyReviewFindings } from "./verify-review-findings.js";
 import type {
   ArtifactEnvelope,
   DeepReviewResult,
@@ -153,11 +154,12 @@ export async function reviewLocalRange(
       error: message,
     };
   }
+  const verification = verifyReviewFindings({ findings: deepReview.findings, changedFiles });
 
   const screeningDiagnostics = [...screeningCandidates.diagnostics, ...screening.diagnostics];
   const status = deepReview.status === "failed"
     ? "failed"
-    : screening.status === "failed" || impact.status === "failed" || scope.status === "partial"
+    : screening.status === "failed" || impact.status === "failed" || scope.status === "partial" || verification.status === "partial"
       ? "partial"
       : "ok";
   const artifacts: ReviewRunArtifacts = {
@@ -176,6 +178,7 @@ export async function reviewLocalRange(
         ...intent.diagnostics.map((item) => "Intent: " + item),
         ...scopeDiagnostics.map((item) => "Scope: " + item),
         ...scope.diagnostics.map((item) => "Scope: " + item),
+        ...verification.diagnostics.map((item) => "Verification: " + item),
         ...screeningDiagnostics.map((item) => "Screening: " + item),
         ...deepReview.diagnostics,
       ],
@@ -211,7 +214,7 @@ export async function reviewLocalRange(
       ...(deepReview.error === undefined ? {} : { error: deepReview.error }),
     }),
     findings: envelope(input.runId, input.createdAt, range.headSha, {
-      findings: deepReview.findings,
+      findings: verification.findings,
     }),
   };
 
@@ -220,7 +223,7 @@ export async function reviewLocalRange(
   return {
     runId: input.runId,
     status,
-    findingsCount: deepReview.findings.length,
+    findingsCount: verification.findings.length,
     impactCandidatesCount: impact.graph.candidates.length,
     scope,
     intent,

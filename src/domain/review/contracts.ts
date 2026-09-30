@@ -304,6 +304,14 @@ export interface DeepReviewResult {
   error?: string;
 }
 
+export interface VerificationResult {
+  status: "ok" | "partial";
+  findings: ReviewFinding[];
+  diagnostics: string[];
+  mergedClusters: number;
+  suppressedFindings: number;
+}
+
 export interface ArtifactEnvelope<T> {
   schemaVersion: 1;
   runId: string;
