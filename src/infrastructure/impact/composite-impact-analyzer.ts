@@ -17,6 +17,7 @@ import { TestRelationAnalyzer } from "./test-relation-analyzer.js";
 import { TextReferenceAnalyzer } from "./text-reference-analyzer.js";
 import { TypeScriptImportAnalyzer } from "./languages/typescript-analyzer.js";
 import { SemanticImpactAnalyzer } from "./semantic-impact-analyzer.js";
+import { goImpactAnalyzer, javaImpactAnalyzer, phpImpactAnalyzer, pythonImpactAnalyzer } from "./languages/additional-language-analyzers.js";
 
 const sourceExtensions = new Set([".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"]);
 const documentationExtensions = new Set([".md", ".mdx", ".txt"]);
@@ -125,6 +126,10 @@ export class CompositeImpactAnalyzer implements ImpactAnalyzer {
       new TestRelationAnalyzer(),
       new ConfigSchemaAnalyzer(),
       new SemanticImpactAnalyzer(),
+      phpImpactAnalyzer,
+      goImpactAnalyzer,
+      pythonImpactAnalyzer,
+      javaImpactAnalyzer,
     ],
   ) {}
 

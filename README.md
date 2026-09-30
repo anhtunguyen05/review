@@ -32,6 +32,9 @@ are invoked only through explicitly configured trusted executables. Impact
 discovery reads Git snapshots through bounded, read-only commands. A
 changed-document intent pass writes `artifacts/intent.json`; deterministic
 concept matches can add evidence-backed `DOC_SEMANTIC` impact candidates.
+Structural language analyzers currently cover JS/TS, PHP/Laravel, Go, Python,
+and Java through bounded read-only source references; no repository runtime is
+executed during discovery.
 Normalized OCR findings pass a fail-closed verification stage before
 `findings.json` or GitHub publication: duplicate engines are correlated,
 evidence is required, and confidence bounds severity.
