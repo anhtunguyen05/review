@@ -6,12 +6,14 @@ import type { ImpactAnalyzer } from "./ports/impact-analyzer.js";
 import type { RepositoryContentPort } from "./ports/repository-content.js";
 import { collectReviewScreeningCandidates } from "./review-scope-candidates.js";
 import { planReviewScope } from "./plan-review-scope.js";
+import { discoverChangeIntent } from "./discover-change-intent.js";
 import type {
   ArtifactEnvelope,
   DeepReviewResult,
   ImpactPolicy,
   ImpactDiscoveryResult,
   ReviewBudget,
+  IntentDiscoveryResult,
   ScopePlanningResult,
   ReviewRunArtifacts,
   ScreeningResult,
@@ -24,6 +26,8 @@ export interface LocalReviewInput {
   outputDirectory: string;
   runId: string;
   createdAt: string;
+  title?: string;
+  body?: string;
 }
 
 export interface LocalReviewDependencies {
@@ -43,6 +47,7 @@ export interface LocalReviewResult {
   findingsCount: number;
   impactCandidatesCount: number;
   scope: ScopePlanningResult;
+  intent: IntentDiscoveryResult;
   screeningDecisionsCount: number;
   artifacts: ReviewRunArtifacts;
 }
@@ -62,9 +67,27 @@ export async function reviewLocalRange(
 ): Promise<LocalReviewResult> {
   const range = await dependencies.git.resolveRange(input);
   const changedFiles = await dependencies.git.getChangedFiles(range);
+  const intentDocuments: Array<{ path: string; content: string }> = [];
+  const intentDiagnostics: string[] = [];
+  for (const file of changedFiles) {
+    if (!/\.(md|mdx|txt)$/i.test(file.path)) continue;
+    try {
+      intentDocuments.push({
+        path: file.path,
+        content: await dependencies.content.readFile({
+          repositoryPath: range.repositoryPath,
+          commitSha: file.status === "deleted" ? range.baseSha : range.headSha,
+          path: file.path,
+        }),
+      });
+    } catch (error: unknown) {
+      intentDiagnostics.push("Intent document unavailable for " + file.path + ": " + (error instanceof Error ? error.message : "unknown error"));
+    }
+  }
+  const intent = discoverChangeIntent({ changedFiles, documents: intentDocuments, ...(input.title === undefined ? {} : { title: input.title }), ...(input.body === undefined ? {} : { body: input.body }) });
   let impact: ImpactDiscoveryResult;
   try {
-    impact = await dependencies.impact.discover({ ...range, changedFiles, policy: dependencies.impactPolicy });
+    impact = await dependencies.impact.discover({ ...range, changedFiles, policy: dependencies.impactPolicy, intent: intent.intent });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Impact discovery failed";
     impact = { status: "failed", graph: { nodes: [], edges: [], candidates: [] }, diagnostics: [message], error: message };
@@ -149,6 +172,8 @@ export async function reviewLocalRange(
       status,
       diagnostics: [
         ...impact.diagnostics.map((item) => "Impact: " + item),
+        ...intentDiagnostics.map((item) => "Intent: " + item),
+        ...intent.diagnostics.map((item) => "Intent: " + item),
         ...scopeDiagnostics.map((item) => "Scope: " + item),
         ...scope.diagnostics.map((item) => "Scope: " + item),
         ...screeningDiagnostics.map((item) => "Screening: " + item),
@@ -170,6 +195,7 @@ export async function reviewLocalRange(
       diagnostics: impact.diagnostics,
       ...(impact.error === undefined ? {} : { error: impact.error }),
     }),
+    intent: envelope(input.runId, input.createdAt, range.headSha, intent),
     scope: envelope(input.runId, input.createdAt, range.headSha, {
       status: scope.status,
       scope: scope.scope,
@@ -197,6 +223,7 @@ export async function reviewLocalRange(
     findingsCount: deepReview.findings.length,
     impactCandidatesCount: impact.graph.candidates.length,
     scope,
+    intent,
     screeningDecisionsCount: screening.decisions.length,
     artifacts,
   };

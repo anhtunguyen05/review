@@ -1,9 +1,10 @@
 # code-review-orchestrator
 
-The repository now provides a local Phase 5 slice: Git range resolution,
+The repository now provides a local Phase 6 slice: Git range resolution,
 deterministic JS/TS structural impact discovery, screening through a trusted
 Jev-compatible executable, deterministic adaptive OCR scope planning, OCR
-normalization, versioned local artifacts, and idempotent GitHub publication.
+normalization, grounded semantic impact discovery, versioned local artifacts,
+and idempotent GitHub publication.
 
 ## Runtime
 
@@ -28,7 +29,9 @@ npm run review -- --help
 
 The local CLI does not execute pull-request repository code. OCR and screening
 are invoked only through explicitly configured trusted executables. Impact
-discovery reads Git snapshots through bounded, read-only commands.
+discovery reads Git snapshots through bounded, read-only commands. A
+changed-document intent pass writes `artifacts/intent.json`; deterministic
+concept matches can add evidence-backed `DOC_SEMANTIC` impact candidates.
 
 ## Local impact discovery
 

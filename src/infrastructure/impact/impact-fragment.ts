@@ -5,6 +5,7 @@ import type {
   ImpactCandidate,
   ImpactPolicy,
   GitReviewRange,
+  ChangeIntent,
 } from "../../domain/review/contracts.js";
 
 export interface ImpactSnapshotFile {
@@ -19,6 +20,7 @@ export interface ImpactFragmentInput {
   changedFiles: ChangedFile[];
   files: ImpactSnapshotFile[];
   policy: ImpactPolicy;
+  intent?: ChangeIntent;
 }
 
 export interface ImpactFragment {

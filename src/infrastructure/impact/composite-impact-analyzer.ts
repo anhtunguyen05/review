@@ -16,6 +16,7 @@ import type { ImpactFragment, ImpactFragmentAnalyzer, ImpactFragmentInput, Impac
 import { TestRelationAnalyzer } from "./test-relation-analyzer.js";
 import { TextReferenceAnalyzer } from "./text-reference-analyzer.js";
 import { TypeScriptImportAnalyzer } from "./languages/typescript-analyzer.js";
+import { SemanticImpactAnalyzer } from "./semantic-impact-analyzer.js";
 
 const sourceExtensions = new Set([".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"]);
 const documentationExtensions = new Set([".md", ".mdx", ".txt"]);
@@ -123,6 +124,7 @@ export class CompositeImpactAnalyzer implements ImpactAnalyzer {
       new TextReferenceAnalyzer(),
       new TestRelationAnalyzer(),
       new ConfigSchemaAnalyzer(),
+      new SemanticImpactAnalyzer(),
     ],
   ) {}
 
@@ -164,7 +166,7 @@ export class CompositeImpactAnalyzer implements ImpactAnalyzer {
       return { status: "failed", graph: emptyGraph(), diagnostics, error: "A changed file could not be read for impact discovery" };
     }
 
-    const fragmentInput: ImpactFragmentInput = { range: input, changedFiles: input.changedFiles, files, policy: input.policy };
+    const fragmentInput: ImpactFragmentInput = { range: input, changedFiles: input.changedFiles, files, policy: input.policy, ...(input.intent === undefined ? {} : { intent: input.intent }) };
     const fragments = this.analyzers.map((analyzer) => analyzer.analyze(fragmentInput));
     diagnostics.push(...fragments.flatMap((fragment) => fragment.diagnostics));
     let graph = mergeFragments(fragments);

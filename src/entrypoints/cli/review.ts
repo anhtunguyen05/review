@@ -12,9 +12,10 @@ Usage:
          [--screening-command <path>] [--screening-arg <arg>]
 
   Local review:
-  Resolves merge-base(from, to), discovers structural JS/TS impact, screens
-  direct and impacted files when a trusted screening executable is configured,
-  plans a bounded OCR scope, invokes OCR, and writes run.json,
+  Resolves merge-base(from, to), derives bounded intent concepts from changed
+  documents, discovers structural and semantic JS/TS impact, screens direct
+  and impacted files when a trusted screening executable is configured, plans a
+  bounded OCR scope, invokes OCR, and writes run.json, intent.json,
   impact-graph.json, screening.json, scope.json, ocr.raw.json, and findings.json
   to the output directory.
   Impact and OCR scope limits are configured under the trusted --config YAML file.

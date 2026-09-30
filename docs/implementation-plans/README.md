@@ -23,3 +23,4 @@ This folder contains execution details for the phases listed in
 - [Phase 4](phase-4.md) — structural JS/TS impact discovery; adaptive OCR scope remains out of scope.
 
 - [Phase 5](phase-5.md) - adaptive, budgeted OCR scope with persisted selection and exclusion reasons.
+- [Phase 6](phase-6.md) - grounded intent and deterministic semantic impact discovery.

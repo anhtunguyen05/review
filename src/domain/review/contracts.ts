@@ -32,6 +32,19 @@ export interface PullRequestContext {
   changedFiles: ChangedFile[];
 }
 
+export interface ChangeIntent {
+  summary: string;
+  concepts: string[];
+  sources: Array<{ kind: "TITLE" | "BODY" | "DOCUMENT"; path?: string; excerpt: string }>;
+  confidence: number;
+}
+
+export interface IntentDiscoveryResult {
+  status: "ok" | "partial" | "disabled";
+  intent: ChangeIntent;
+  diagnostics: string[];
+}
+
 export interface CodeLocation {
   path: string;
   startLine?: number;
@@ -97,6 +110,7 @@ export interface ImpactPolicy {
 export interface ImpactDiscoveryInput extends GitReviewRange {
   changedFiles: ChangedFile[];
   policy: ImpactPolicy;
+  intent?: ChangeIntent;
 }
 
 export interface ImpactDiscoveryResult {
@@ -325,6 +339,7 @@ export interface ReviewRunArtifacts {
     diagnostics: string[];
     error?: string;
   }>;
+  intent: ArtifactEnvelope<IntentDiscoveryResult>;
   scope: ArtifactEnvelope<{
     status: ScopePlanningResult["status"];
     scope: ReviewScope;
